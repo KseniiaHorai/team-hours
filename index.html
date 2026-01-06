@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Team Hours Tracker</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                padding: 20px;
+            }
+
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
+            h1 {
+                color: white;
+                text-align: center;
+                margin-bottom: 10px;
+                font-size: 28px;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            }
+
+            .person-name {
+                color: rgba(255, 255, 255, 0.9);
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 20px;
+            }
+
+            .loading {
+                background: white;
+                border-radius: 16px;
+                padding: 40px;
+                text-align: center;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            }
+
+            .spinner {
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #667eea;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                animation: spin 1s linear infinite;
+                margin: 0 auto 20px;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .error-card {
+                background: #fee;
+                border-radius: 16px;
+                padding: 30px;
+                text-align: center;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+                color: #c00;
+            }
+
+            .hours-card {
+                background: white;
+                border-radius: 16px;
+                padding: 25px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+                display: none;
+            }
+
+            .hours-card.active {
+                display: block;
+            }
+
+            .period {
+                background: #f0f4ff;
+                padding: 10px 15px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                color: #667eea;
+                font-weight: 600;
+            }
+
+            .task-list {
+                list-style: none;
+            }
+
+            .task-item {
+                display: flex;
+                justify-content: space-between;
+                padding: 12px 0;
+                border-bottom: 1px solid #eee;
+            }
+
+            .task-item:last-child {
+                border-bottom: none;
+            }
+
+            .task-name {
+                color: #333;
+            }
+
+            .task-hours {
+                font-weight: 600;
+                color: #667eea;
+                background: #f0f4ff;
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 14px;
+            }
+
+            .task-item.meeting .task-name {
+                color: #888;
+                font-style: italic;
+            }
+
+            .task-item.meeting .task-hours {
+                background: #fff3e0;
+                color: #f57c00;
+            }
+
+            .total-row {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 20px;
+                padding-top: 15px;
+                border-top: 2px solid #667eea;
+                font-size: 18px;
+                font-weight: 700;
+            }
+
+            .total-hours {
+                color: #667eea;
+            }
+
+            .note {
+                background: #fff3e0;
+                padding: 10px 15px;
+                border-radius: 8px;
+                margin-top: 15px;
+                font-size: 13px;
+                color: #e65100;
+            }
+
+            .no-tasks {
+                text-align: center;
+                color: #888;
+                padding: 40px;
+            }
+
+            /* Team Lead Summary Styles */
+            .team-lead-section {
+                margin-top: 20px;
+                padding-top: 20px;
+                border-top: 2px dashed #ddd;
+            }
+
+            .team-lead-title {
+                font-size: 14px;
+                color: #888;
+                margin-bottom: 15px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .summary-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .summary-table th,
+            .summary-table td {
+                padding: 10px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+            }
+
+            .summary-table th {
+                background: #f8f9fa;
+                font-weight: 600;
+                color: #555;
+            }
+
+            .summary-table td:last-child {
+                text-align: right;
+                font-weight: 600;
+                color: #667eea;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📊 Team Hours</h1>
+            <div class="person-name" id="person-name"></div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>Loading your hours...</div>
+            </div>
+
+            <div class="error-card" id="error" style="display: none">
+                <h3>⚠️ Error</h3>
+                <p id="error-message"></p>
+            </div>
+
+            <div class="hours-card" id="hours-display">
+                <div class="period" id="period-display"></div>
+                <ul class="task-list" id="task-list"></ul>
+                <div class="total-row">
+                    <span>Total Hours</span>
+                    <span class="total-hours" id="total-hours"></span>
+                </div>
+                <div id="note-container"></div>
+
+                <!-- Team Lead Section -->
+                <div
+                    class="team-lead-section"
+                    id="team-lead-section"
+                    style="display: none"
+                >
+                    <div class="team-lead-title">
+                        👥 Team Summary (Team Lead View)
+                    </div>
+                    <table class="summary-table" id="summary-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Total Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summary-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // ============ CONFIGURATION - CHANGE THIS ============
+            const GOOGLE_SHEET_URL =
+                "https://docs.google.com/spreadsheets/d/1LVP3gbLtLxiKkxtHEWkCwXcdznsDv4IT/gviz/tq?tqx=out:json";
+
+            // List team leads who can see everyone's summary
+            const TEAM_LEADS = ["karolina", "ira", "ksenia"];
+            // ============ END CONFIGURATION ============
+
+            // Get person from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const person = urlParams.get("person")?.toLowerCase();
+
+            const loadingEl = document.getElementById("loading");
+            const errorEl = document.getElementById("error");
+            const errorMessageEl = document.getElementById("error-message");
+            const hoursCard = document.getElementById("hours-display");
+            const personNameEl = document.getElementById("person-name");
+            const periodDisplay = document.getElementById("period-display");
+            const taskList = document.getElementById("task-list");
+            const totalHours = document.getElementById("total-hours");
+            const noteContainer = document.getElementById("note-container");
+            const teamLeadSection =
+                document.getElementById("team-lead-section");
+            const summaryBody = document.getElementById("summary-body");
+
+            function showError(message) {
+                loadingEl.style.display = "none";
+                errorEl.style.display = "block";
+                errorMessageEl.textContent = message;
+            }
+
+            function isMeeting(taskName) {
+                const lower = taskName.toLowerCase();
+                return (
+                    lower.includes("meeting") ||
+                    lower.includes("performance review")
+                );
+            }
+
+            if (!person) {
+                showError(
+                    "No person specified. Use link like: ?person=yourname"
+                );
+            } else if (GOOGLE_SHEET_URL === "YOUR_GOOGLE_SHEET_URL_HERE") {
+                showError(
+                    "Google Sheet not connected yet. Follow setup instructions."
+                );
+            } else {
+                // Fetch data from Google Sheet
+                fetch(GOOGLE_SHEET_URL)
+                    .then((response) => response.text())
+                    .then((text) => {
+                        // Parse Google's JSON response (it's wrapped in google.visualization.Query.setResponse())
+                        const json = JSON.parse(
+                            text.substring(47, text.length - 2)
+                        );
+                        const rows = json.table.rows;
+                        const cols = json.table.cols;
+
+                        // Find column indexes
+                        let nameCol = 0,
+                            periodCol = 1,
+                            taskCol = 2,
+                            hoursCol = 3,
+                            noteCol = 4;
+
+                        // Filter data for this person
+                        const personData = [];
+                        const allPeopleData = {}; // For team lead summary
+                        let currentPeriod = "";
+                        let personNote = "";
+                        let displayName = "";
+
+                        rows.forEach((row) => {
+                            if (!row.c[nameCol] || !row.c[nameCol].v) return;
+
+                            const name = row.c[nameCol].v
+                                .toString()
+                                .toLowerCase()
+                                .trim();
+                            const period = row.c[periodCol]?.v || "";
+                            const task = row.c[taskCol]?.v || "";
+                            const hours = parseFloat(row.c[hoursCol]?.v) || 0;
+                            const note = row.c[noteCol]?.v || "";
+
+                            // Collect all people data for team leads
+                            if (!allPeopleData[name]) {
+                                allPeopleData[name] = {
+                                    displayName: row.c[nameCol].v,
+                                    totalHours: 0,
+                                };
+                            }
+                            allPeopleData[name].totalHours += hours;
+
+                            if (name === person) {
+                                displayName = row.c[nameCol].v;
+                                currentPeriod = period;
+                                if (note) personNote = note;
+                                personData.push({ task, hours });
+                            }
+                        });
+
+                        loadingEl.style.display = "none";
+
+                        if (personData.length === 0) {
+                            showError(
+                                `No hours found for "${person}". Check spelling or ask your manager.`
+                            );
+                            return;
+                        }
+
+                        // Display data
+                        personNameEl.textContent = `Welcome, ${displayName}!`;
+                        periodDisplay.textContent = `📅 Period: ${currentPeriod}`;
+
+                        taskList.innerHTML = "";
+                        let total = 0;
+
+                        personData.forEach((item) => {
+                            const li = document.createElement("li");
+                            const meetingClass = isMeeting(item.task)
+                                ? " meeting"
+                                : "";
+                            li.className = "task-item" + meetingClass;
+                            li.innerHTML = `
+                            <span class="task-name">${item.task}</span>
+                            <span class="task-hours">${item.hours}h</span>
+                        `;
+                            taskList.appendChild(li);
+                            total += item.hours;
+                        });
+
+                        totalHours.textContent = total + " hours";
+
+                        if (personNote) {
+                            noteContainer.innerHTML = `<div class="note">📝 ${personNote}</div>`;
+                        }
+
+                        // Show team lead section if applicable
+                        if (TEAM_LEADS.includes(person)) {
+                            teamLeadSection.style.display = "block";
+                            summaryBody.innerHTML = "";
+
+                            Object.keys(allPeopleData)
+                                .sort()
+                                .forEach((name) => {
+                                    const data = allPeopleData[name];
+                                    const tr = document.createElement("tr");
+                                    tr.innerHTML = `
+                                <td>${data.displayName}</td>
+                                <td>${data.totalHours}h</td>
+                            `;
+                                    summaryBody.appendChild(tr);
+                                });
+                        }
+
+                        hoursCard.classList.add("active");
+                    })
+                    .catch((err) => {
+                        showError(
+                            "Could not load data. Check Google Sheet settings."
+                        );
+                        console.error(err);
+                    });
+            }
+        </script>
+    </body>
+</html>
